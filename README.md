@@ -1,4 +1,4 @@
 # confrac
 Continued fractions
 
-Mainly to help me study conftinued fractions and hone some Python skills.
+Mainly to help me study continued fractions and hone my Python skills.
