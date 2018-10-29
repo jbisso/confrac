@@ -16,10 +16,29 @@ class ContinuedFraction():
     
     precision = 100
     
-    def __init__(self, cf, kind = Kind.FINITE):
+    # generators for some interesting CF
+
+    def _getRepetionGenerator(self, endPoint = 100):
+        patternLength = len(self.partialQuotients[1:])
+        while endPoint > 0:
+            print(self.partialQuotients[1:], self.partialQuotients[1:][endPoint % patternLength])
+            yield self.partialQuotients[1:][endPoint % patternLength]
+            endPoint -= 1
+            
+    def _getNextNumberGenerator(self, endPoint = 100):
+        patternLength = len(self.partialQuotients[1:])
+        if endPoint < patternLength:
+            i = endPoint
+        else:
+            i = patternLength
+        while i > 0:
+            yield self.partialQuotients[1:][i]
+            i -= 1
+    
+    def __init__(self, cf, kind = Kind.FINITE, genFunc = None):
         """
         Creates an object from a simple list, string of the older notation,
-        or a Fraction.
+        or a Fraction. genFunc provides a generator for the sequence.
         """
         if type(cf) is list:
             self.partialQuotients = cf
@@ -30,11 +49,15 @@ class ContinuedFraction():
             self._initFromFraction(cf)
         else:
             raise TypeError('type of cf argument must be a list, string, or Fraction!')
+        if genFunc:
+            #print(genFunc, type(genFunc))
+            self.genFunc = genFunc
     
     def _initFromFraction(self, cf):
         """All CFs from ratios (Fraction) are finite."""
         
         self.kind = self.Kind.FINITE
+        self.genFunc = ContinuedFraction._getNextNumberGenerator
         self.partialQuotients = []
         r = math.floor(cf)
         self.partialQuotients.append(r)
@@ -58,21 +81,16 @@ class ContinuedFraction():
                 partQuots = partQuots[:-3]
                 if partQuots[0] == '(' and partQuots[-1] == ')':
                     self.kind = self.Kind.REPEATING
+                    self.genFunc = ContinuedFraction._getNextNumberGenerator
                     self.partialQuotients = self.partialQuotients + [int(d) for d in partQuots[1:-1].split(',')]
                 else:
                     self.kind = self.Kind.NON_FINITE
+                    self.genFunc = ContinuedFraction._getNextNumberGenerator
                     self.partialQuotients = self.partialQuotients + [int(d) for d in partQuots.split(',')]
             else:
                 self.kind = self.Kind.FINITE
+                self.genFunc = ContinuedFraction._getNextNumberGenerator
                 self.partialQuotients = self.partialQuotients + [int(d) for d in partQuots.split(',')]
-    
-    # generators for some interesting CF
-
-    def _getRepetionGenerator(self, pattern, endPoint = 100):
-        patternLength = len(pattern)
-        while endPoint >= 0:
-            yield pattern[endPoint % patternLength]
-            endPoint -= 1
     
     @classmethod
     def getSquareRoot(cls, s):
@@ -88,12 +106,13 @@ class ContinuedFraction():
                 result.append(a)
                 if a == 2 * result[0]:
                     break
-        return ContinuedFraction(result, kind = cls.Kind.REPEATING)
+        return ContinuedFraction(result, kind = cls.Kind.REPEATING, genFunc = cls._getRepetionGenerator)
 
     def calculate(self):
         result = 0
         if self.kind == self.Kind.REPEATING:
-            for b in self._getRepetionGenerator(self.partialQuotients[1:]):
+            for b in self.genFunc(self):
+                print("b:", b, "result: ", result )
                 result = Fraction(1, b + result)
             result += self.partialQuotients[0]
         else:
@@ -131,8 +150,10 @@ def testPrint(cf, extra = None):
         print("%s, %2.20f" % (cf, float(cf.calculate())))
 
 def main():
-    testPrint(ContinuedFraction.getSquareRoot(2), math.sqrt(2))
-    testPrint(ContinuedFraction(" [1; (2) ...]"))
+    #testPrint(ContinuedFraction.getSquareRoot(2), math.sqrt(2))
+    cf = ContinuedFraction(" [1; (2) ...]")
+    print("cf, cf.partialQuotients, cf.partialQuotients[1:]", cf, cf.partialQuotients, cf.partialQuotients[1:])
+    testPrint(cf)
     testPrint(ContinuedFraction.getSquareRoot(3), math.sqrt(3))
     testPrint(ContinuedFraction.getSquareRoot(23), math.sqrt(23))
     testPrint(ContinuedFraction(" [1; (2, 4, 5) ...]"))
@@ -144,7 +165,8 @@ def main():
     testPrint(ContinuedFraction("[3; 4, 12, 4]" ), 3.245)
     testPrint(ContinuedFraction("[0; 1, 5, 2, 2]"))
     testPrint(ContinuedFraction("[3; 7, 15, 2, 7, 1, 4, 2]"), 3.14155)
-    ContinuedFraction(3.1415)
+    #cf = ContinuedFraction(3.1415)
+    cf = ContinuedFraction("[1; (2) ...]", genFunc = ContinuedFraction._getRepetionGenerator)
     
 if __name__ == "__main__":
     main()
